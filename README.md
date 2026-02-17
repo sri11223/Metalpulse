@@ -6,9 +6,9 @@ Built with React Native (Expo SDK 54) — featuring live pricing, AI-powered tec
 
 ## 📲 Download APK
 
-[![Download APK](https://img.shields.io/badge/Download-Android_APK-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://expo.dev/artifacts/eas/56v8zChunFGePTvXYTNuZ4.apk)
+[![Download APK](https://img.shields.io/badge/Download-Android_APK-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://expo.dev/artifacts/eas/sd5jqgZvYP8Q89GaYoiuKJ.apk)
 
-> **Direct link:** https://expo.dev/artifacts/eas/56v8zChunFGePTvXYTNuZ4.apk
+> **Direct link:** https://expo.dev/artifacts/eas/sd5jqgZvYP8Q89GaYoiuKJ.apk
 
 ---
 
