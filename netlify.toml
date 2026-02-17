@@ -1,0 +1,13 @@
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[build]
+  command = "npx expo export --platform web"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+  EXPO_PUBLIC_GOLDAPI_KEY = "goldapi-10a7z619mlqqu76y-io"
+  EXPO_PUBLIC_INR_KEY = "a977aba85955359d2215f1f7"

@@ -1,0 +1,58 @@
+{
+  "cli": {
+    "version": ">= 12.0.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
+      },
+      "ios": {
+        "simulator": true
+      },
+      "node": "20.18.0",
+      "env": {
+        "EXPO_PUBLIC_GOLDAPI_KEY": "goldapi-10a7z619mlqqu76y-io",
+        "EXPO_PUBLIC_INR_KEY": "a977aba85955359d2215f1f7"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "node": "20.18.0",
+      "env": {
+        "EXPO_PUBLIC_GOLDAPI_KEY": "goldapi-10a7z619mlqqu76y-io",
+        "EXPO_PUBLIC_INR_KEY": "a977aba85955359d2215f1f7"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "node": "20.18.0",
+      "env": {
+        "EXPO_PUBLIC_GOLDAPI_KEY": "goldapi-10a7z619mlqqu76y-io",
+        "EXPO_PUBLIC_INR_KEY": "a977aba85955359d2215f1f7"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "android": {
+        "serviceAccountKeyPath": "./google-service-account.json",
+        "track": "internal"
+      },
+      "ios": {
+        "appleId": "your-apple-id@email.com",
+        "ascAppId": "your-app-store-connect-app-id"
+      }
+    }
+  }
+}

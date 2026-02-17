@@ -22,7 +22,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Run TypeScript compiler
         run: npx tsc --noEmit
@@ -43,7 +43,7 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Run ESLint
         run: npx expo lint || echo "No lint config — skipping"

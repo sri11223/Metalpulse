@@ -55,7 +55,7 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: TypeScript check
         run: npx tsc --noEmit
@@ -87,7 +87,7 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Build Android (production)
         run: eas build --platform android --profile production --non-interactive
