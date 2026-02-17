@@ -40,9 +40,9 @@ export default function SparklineChart({
     <View style={[styles.container, { width, height }]}>
       <Svg width={width} height={height}>
         <Defs>
-          <LinearGradient id="sparkFade" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={lineColor} stopOpacity="0.2" />
-            <Stop offset="1" stopColor={lineColor} stopOpacity="0" />
+          <LinearGradient id="sparkFade" x1={0} y1={0} x2={0} y2={1}>
+            <Stop offset={0} stopColor={lineColor} stopOpacity={0.2} />
+            <Stop offset={1} stopColor={lineColor} stopOpacity={0} />
           </LinearGradient>
         </Defs>
         <Rect x={0} y={0} width={width} height={height} fill="url(#sparkFade)" rx={4} />

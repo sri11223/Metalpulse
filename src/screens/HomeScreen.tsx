@@ -94,7 +94,7 @@ export default function HomeScreen() {
       {/* ── Currency Picker Modal ── */}
       <Modal
         visible={currencyModalVisible}
-        transparent
+        transparent={true}
         animationType="slide"
         onRequestClose={() => setCurrencyModalVisible(false)}
       >
