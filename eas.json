@@ -16,7 +16,7 @@
       },
       "node": "20.18.0",
       "env": {
-        "EXPO_PUBLIC_GOLDAPI_KEY": "goldapi-10a7z619mlqqu76y-io",
+        "EXPO_PUBLIC_GOLDAPI_KEY": "goldapi-2783r519mlqx34ly-io",
         "EXPO_PUBLIC_INR_KEY": "a977aba85955359d2215f1f7"
       }
     },
@@ -27,7 +27,7 @@
       },
       "node": "20.18.0",
       "env": {
-        "EXPO_PUBLIC_GOLDAPI_KEY": "goldapi-10a7z619mlqqu76y-io",
+        "EXPO_PUBLIC_GOLDAPI_KEY": "goldapi-2783r519mlqx34ly-io",
         "EXPO_PUBLIC_INR_KEY": "a977aba85955359d2215f1f7"
       }
     },
@@ -38,7 +38,7 @@
       },
       "node": "20.18.0",
       "env": {
-        "EXPO_PUBLIC_GOLDAPI_KEY": "goldapi-10a7z619mlqqu76y-io",
+        "EXPO_PUBLIC_GOLDAPI_KEY": "goldapi-2783r519mlqx34ly-io",
         "EXPO_PUBLIC_INR_KEY": "a977aba85955359d2215f1f7"
       }
     }
