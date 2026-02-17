@@ -18,6 +18,8 @@ import { DisplayCurrency } from '../api/types';
 import MetalTile from '../components/MetalTile';
 import MarketStatus from '../components/MarketStatus';
 import RefreshCountdown from '../components/RefreshCountdown';
+import MarketSentimentBar from '../components/MarketSentimentBar';
+import LivePulse from '../components/LivePulse';
 import { Colors, FontSize, Spacing, Radius, Shadows } from '../constants/theme';
 
 export default function HomeScreen() {
@@ -47,7 +49,10 @@ export default function HomeScreen() {
       {/* ── Header ── */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Text style={styles.appName}>MetalPulse</Text>
+          <View style={styles.appNameRow}>
+            <Text style={styles.appName}>MetalPulse</Text>
+            <LivePulse color={Colors.green} size={6} style={{ marginLeft: 8, marginBottom: 2 }} />
+          </View>
           <Text style={styles.tagline}>Live Precious Metal Prices</Text>
         </View>
         <View style={styles.headerRight}>
@@ -87,25 +92,40 @@ export default function HomeScreen() {
           ))}
         </View>
 
+        {/* ── AI Sentiment Bar ── */}
+        <MarketSentimentBar />
+
         {/* ── Quick Actions ── */}
         <Text style={styles.quickTitle}>Tools</Text>
         <View style={styles.quickRow}>
+          <TouchableOpacity style={styles.quickBtn} onPress={() => router.push('/ai-insights' as any)} activeOpacity={0.7}>
+            <Text style={styles.quickIcon}>🤖</Text>
+            <Text style={styles.quickLabel}>AI Insights</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.quickBtn} onPress={() => router.push('/portfolio' as any)} activeOpacity={0.7}>
+            <Text style={styles.quickIcon}>💼</Text>
+            <Text style={styles.quickLabel}>Portfolio</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.quickBtn} onPress={() => router.push('/sip' as any)} activeOpacity={0.7}>
             <Text style={styles.quickIcon}>📊</Text>
-            <Text style={styles.quickLabel}>SIP Calculator</Text>
+            <Text style={styles.quickLabel}>SIP Calc</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={styles.quickBtn} onPress={() => router.push('/alerts' as any)} activeOpacity={0.7}>
+            <Text style={styles.quickIcon}>🔔</Text>
+            <Text style={styles.quickLabel}>Alerts</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={[styles.quickRow, { marginTop: Spacing.sm }]}>
           <TouchableOpacity style={styles.quickBtn} onPress={() => router.push('/invest' as any)} activeOpacity={0.7}>
             <Text style={styles.quickIcon}>💰</Text>
-            <Text style={styles.quickLabel}>Buy Calculator</Text>
+            <Text style={styles.quickLabel}>Buy Calc</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.quickBtn} onPress={() => router.push('/converter' as any)} activeOpacity={0.7}>
             <Text style={styles.quickIcon}>⚖️</Text>
             <Text style={styles.quickLabel}>Converter</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.quickBtn} onPress={() => router.push('/alerts' as any)} activeOpacity={0.7}>
-            <Text style={styles.quickIcon}>🔔</Text>
-            <Text style={styles.quickLabel}>Price Alerts</Text>
-          </TouchableOpacity>
+          <View style={[styles.quickBtn, { backgroundColor: 'transparent', borderColor: 'transparent' }]} />
+          <View style={[styles.quickBtn, { backgroundColor: 'transparent', borderColor: 'transparent' }]} />
         </View>
 
         {/* ── Refresh Timer ── */}
@@ -115,7 +135,7 @@ export default function HomeScreen() {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            Auto-refresh every 2 min • Data from GoldAPI.io
+            Auto-refresh every 30s • Live data from GoldAPI.io
           </Text>
         </View>
       </ScrollView>
@@ -178,6 +198,10 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.md,
   },
   headerLeft: {},
+  appNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   appName: {
     fontSize: FontSize.xxl,
     fontWeight: '800',

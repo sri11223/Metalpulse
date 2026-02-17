@@ -22,6 +22,8 @@ import GramPriceRow from '../components/GramPriceRow';
 import SpreadIndicator from '../components/SpreadIndicator';
 import DayRangeBar from '../components/DayRangeBar';
 import RefreshCountdown from '../components/RefreshCountdown';
+import AnimatedPrice from '../components/AnimatedPrice';
+import LivePulse from '../components/LivePulse';
 import { Colors, FontSize, Spacing, Radius, Shadows } from '../constants/theme';
 
 export default function DetailScreen() {
@@ -108,9 +110,11 @@ export default function DetailScreen() {
             <View style={[styles.priceAccent, { backgroundColor: metalConfig.color }]} />
             <View style={styles.priceInner}>
               <Text style={styles.priceLabel}>Troy Ounce</Text>
-              <Text style={[styles.priceValue, { color: metalConfig.color }]}>
-                {formatCurrency(convertPrice(data.price, rate), selectedCurrency)}
-              </Text>
+              <AnimatedPrice
+                value={formatCurrency(convertPrice(data.price, rate), selectedCurrency)}
+                style={[styles.priceValue, { color: metalConfig.color }]}
+                direction={data.chp > 0 ? 'up' : data.chp < 0 ? 'down' : 'neutral'}
+              />
               <PriceChange percentChange={data.chp} dollarChange={data.ch * rate} showDollarChange currency={selectedCurrency} />
 
               {state.lastFetched && (

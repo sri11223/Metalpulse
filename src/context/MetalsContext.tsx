@@ -4,7 +4,7 @@ import { MetalCode, GoldApiResponse, CachedMetal, MetalsContextType, DisplayCurr
 import { fetchExchangeRates } from '../api/inrApi';
 import { CACHE_MAX_AGE_MS } from '../constants/metals';
 
-const AUTO_REFRESH_MS = 120_000; // 2 minutes
+const AUTO_REFRESH_MS = 30_000; // 30 seconds — fast refresh for live feel
 
 const MetalsContext = createContext<MetalsContextType | null>(null);
 

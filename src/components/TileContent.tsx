@@ -6,6 +6,7 @@ import { formatCurrency } from '../utils/formatPrice';
 import { formatTimestamp, isStale } from '../utils/formatTime';
 import { convertPrice, gramPrice } from '../utils/priceCalc';
 import PriceChange from './PriceChange';
+import AnimatedPrice from './AnimatedPrice';
 
 interface TileContentProps {
   metal: MetalConfig;
@@ -38,9 +39,11 @@ export default function TileContent({ metal, data, rate, currency }: TileContent
       <Text style={styles.purity}>{metal.purity}</Text>
 
       {/* Price in selected currency */}
-      <Text style={styles.price} numberOfLines={1}>
-        {formatCurrency(displayPrice, currency)} <Text style={styles.priceUnit}>/oz</Text>
-      </Text>
+      <AnimatedPrice
+        value={`${formatCurrency(displayPrice, currency)} /oz`}
+        style={styles.price}
+        direction={data.chp > 0 ? 'up' : data.chp < 0 ? 'down' : 'neutral'}
+      />
 
       {/* Secondary price — always show INR if not already INR */}
       {currency !== 'INR' && (
