@@ -1,10 +1,3 @@
-/**
- * MetalTile — Smart tile that switches between loading/success/error states
- *
- * Uses useMetalPrice hook for independent data fetching per tile.
- * Tapping navigates to the detail page.
- */
-
 import React from 'react';
 import { TouchableOpacity, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -23,7 +16,8 @@ interface MetalTileProps {
 export default function MetalTile({ metal }: MetalTileProps) {
   const router = useRouter();
   const { state, retry } = useMetalPrice(metal.code);
-  const { inrRate } = useMetals();
+  const { selectedCurrency, getRate } = useMetals();
+  const rate = getRate(selectedCurrency);
 
   const handlePress = () => {
     if (state.status === 'success') {
@@ -51,7 +45,7 @@ export default function MetalTile({ metal }: MetalTileProps) {
 
       {state.status === 'success' && state.data && (
         <View style={styles.content}>
-          <TileContent metal={metal} data={state.data} inrRate={inrRate} />
+          <TileContent metal={metal} data={state.data} rate={rate} currency={selectedCurrency} />
         </View>
       )}
 
@@ -79,14 +73,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  accentBar: {
-    height: 3,
-    width: '100%',
-  },
-  content: {
-    flex: 1,
-    padding: Spacing.lg,
-  },
+  accentBar: { height: 3, width: '100%' },
+  content: { flex: 1, padding: Spacing.lg },
   iconBadge: {
     width: 36,
     height: 36,

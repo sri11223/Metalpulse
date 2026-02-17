@@ -1,24 +1,34 @@
 /**
- * inrApi — Fetch wrapper for exchangerate-api.com (USD → INR)
+ * inrApi — Fetch exchange rates from exchangerate-api.com
  *
- * Fetched once per session and cached in context.
+ * Uses the /latest/USD endpoint that returns ALL conversion rates.
+ * This way we support multiple currencies, not just INR.
  */
 
-import { ExchangeRateResponse } from './types';
-import { ApiError } from './goldApi';
+import { ExchangeRateLatestResponse } from './types';
 
-const FALLBACK_INR_RATE = 83.5; // Reasonable fallback if API unavailable
+const FALLBACK_RATES: Record<string, number> = {
+  USD: 1,
+  INR: 83.5,
+  EUR: 0.92,
+  GBP: 0.79,
+  AED: 3.67,
+  JPY: 149.5,
+  CAD: 1.36,
+  AUD: 1.53,
+};
 
 function getApiKey(): string {
   return process.env.EXPO_PUBLIC_INR_KEY ?? '';
 }
 
 /**
- * Fetch the current USD → INR exchange rate
+ * Fetch all exchange rates from USD base
+ * Returns a map of currency code → rate
  */
-export async function fetchInrRate(): Promise<number> {
+export async function fetchExchangeRates(): Promise<Record<string, number>> {
   const apiKey = getApiKey();
-  const url = `https://v6.exchangerate-api.com/v6/${apiKey}/pair/USD/INR`;
+  const url = `https://v6.exchangerate-api.com/v6/${apiKey}/latest/USD`;
 
   try {
     const controller = new AbortController();
@@ -28,22 +38,26 @@ export async function fetchInrRate(): Promise<number> {
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      console.warn(`[INR API] HTTP ${response.status} — using fallback rate`);
-      return FALLBACK_INR_RATE;
+      console.warn(`[Exchange API] HTTP ${response.status} — using fallback rates`);
+      return FALLBACK_RATES;
     }
 
-    const data: ExchangeRateResponse = await response.json();
+    const data: ExchangeRateLatestResponse = await response.json();
 
-    if (data.result === 'success' && typeof data.conversion_rate === 'number') {
-      return data.conversion_rate;
+    if (
+      data.result === 'success' &&
+      data.conversion_rates &&
+      typeof data.conversion_rates === 'object'
+    ) {
+      return data.conversion_rates;
     }
 
-    console.warn('[INR API] Unexpected response — using fallback rate');
-    return FALLBACK_INR_RATE;
+    console.warn('[Exchange API] Unexpected response — using fallback rates');
+    return FALLBACK_RATES;
   } catch (err) {
-    console.warn('[INR API] Fetch failed — using fallback rate', err);
-    return FALLBACK_INR_RATE;
+    console.warn('[Exchange API] Fetch failed — using fallback rates', err);
+    return FALLBACK_RATES;
   }
 }
 
-export { FALLBACK_INR_RATE };
+export { FALLBACK_RATES };

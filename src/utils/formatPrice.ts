@@ -1,70 +1,56 @@
-/**
- * formatPrice — USD & INR formatting utilities
- */
-
-const usdFormatter = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
-const inrFormatter = new Intl.NumberFormat('en-IN', {
-  style: 'currency',
-  currency: 'INR',
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 0,
-});
-
-const gramFormatter = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
+import { DisplayCurrency } from '../api/types';
+import { CURRENCY_MAP } from '../constants/metals';
 
 /**
- * Format a number as USD: $2,341.50
+ * Format a number with currency symbol and proper locale formatting
  */
+export function formatCurrency(value: number, currency: DisplayCurrency = 'USD'): string {
+  const info = CURRENCY_MAP[currency];
+  if (!info) return `$${value.toFixed(2)}`;
+
+  try {
+    // Use Intl for proper locale formatting
+    const formatter = new Intl.NumberFormat(
+      currency === 'INR' ? 'en-IN' : 'en-US',
+      {
+        style: 'currency',
+        currency: currency,
+        minimumFractionDigits: currency === 'JPY' ? 0 : 2,
+        maximumFractionDigits: currency === 'JPY' ? 0 : 2,
+      }
+    );
+    return formatter.format(value);
+  } catch {
+    return `${info.symbol}${value.toFixed(2)}`;
+  }
+}
+
 export function formatUSD(value: number): string {
-  return usdFormatter.format(value);
+  return formatCurrency(value, 'USD');
 }
 
-/**
- * Format a number as INR: ₹62,840
- */
 export function formatINR(value: number): string {
-  return inrFormatter.format(value);
+  return formatCurrency(value, 'INR');
 }
 
-/**
- * Format price per gram in USD: $75.32/g
- */
-export function formatGram(value: number): string {
-  return `${gramFormatter.format(value)}/g`;
+export function formatGram(value: number, currency: DisplayCurrency = 'USD'): string {
+  return `${formatCurrency(value, currency)}/g`;
 }
 
-/**
- * Format a compact number: 2.3K, 1.5M
- */
 export function formatCompact(value: number): string {
   if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
   if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
   return value.toFixed(2);
 }
 
-/**
- * Format a percent change: +0.42% or -1.20%
- */
 export function formatPercent(value: number): string {
   const sign = value >= 0 ? '+' : '';
   return `${sign}${value.toFixed(2)}%`;
 }
 
-/**
- * Format a dollar change: +$9.80 or -$2.30
- */
-export function formatDollarChange(value: number): string {
+export function formatDollarChange(value: number, currency: DisplayCurrency = 'USD'): string {
+  const info = CURRENCY_MAP[currency];
+  const sym = info?.symbol ?? '$';
   const sign = value >= 0 ? '+' : '-';
-  return `${sign}$${Math.abs(value).toFixed(2)}`;
+  return `${sign}${sym}${Math.abs(value).toFixed(2)}`;
 }

@@ -1,9 +1,3 @@
-/**
- * ErrorTile — Tile error state with retry button
- *
- * Shows type-specific error message and optional retry button.
- */
-
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -22,16 +16,10 @@ export default function ErrorTile({ message, retryable, onRetry, metalName }: Er
       <View style={styles.iconContainer}>
         <Ionicons name="alert-circle-outline" size={32} color={Colors.danger} />
       </View>
-
       {metalName && <Text style={styles.metalName}>{metalName}</Text>}
       <Text style={styles.message}>{message}</Text>
-
       {retryable && (
-        <TouchableOpacity
-          style={styles.retryButton}
-          onPress={onRetry}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity style={styles.retryButton} onPress={onRetry} activeOpacity={0.7}>
           <Ionicons name="refresh" size={14} color={Colors.white} />
           <Text style={styles.retryText}>Retry</Text>
         </TouchableOpacity>
@@ -47,18 +35,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: Spacing.md,
   },
-  iconContainer: {
-    marginBottom: Spacing.sm,
-  },
-  metalName: {
-    ...Typography.bodyBold,
-    marginBottom: Spacing.xs,
-  },
+  iconContainer: { marginBottom: Spacing.sm },
+  metalName: { ...Typography.bodyBold, marginBottom: Spacing.xs },
   message: {
     ...Typography.caption,
     color: Colors.danger,
     textAlign: 'center',
     marginBottom: Spacing.md,
+    paddingHorizontal: Spacing.sm,
   },
   retryButton: {
     flexDirection: 'row',
@@ -69,9 +53,5 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
     gap: Spacing.xs,
   },
-  retryText: {
-    ...Typography.caption,
-    color: Colors.white,
-    fontWeight: '600',
-  },
+  retryText: { ...Typography.caption, color: Colors.white, fontWeight: '600' },
 });

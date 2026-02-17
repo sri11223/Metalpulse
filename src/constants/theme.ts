@@ -1,8 +1,6 @@
 import { Platform } from 'react-native';
 
-// ─── Color palette ───
 export const Colors = {
-  // Backgrounds
   bg: '#0A0E1A',
   bgCard: '#141929',
   bgCardHover: '#1A2035',
@@ -11,14 +9,13 @@ export const Colors = {
   bgOverlay: 'rgba(0, 0, 0, 0.6)',
   bgShimmer: '#1A2035',
   bgShimmerHighlight: '#252D45',
+  bgModal: '#111627',
 
-  // Brand
   primary: '#FFD700',
   primaryDim: 'rgba(255, 215, 0, 0.15)',
   accent: '#4FC3F7',
   accentDim: 'rgba(79, 195, 247, 0.15)',
 
-  // Status
   success: '#4CAF50',
   successDim: 'rgba(76, 175, 80, 0.15)',
   danger: '#EF5350',
@@ -26,23 +23,34 @@ export const Colors = {
   warning: '#FFA726',
   warningDim: 'rgba(255, 167, 38, 0.15)',
 
-  // Text
   text: '#FFFFFF',
   textSecondary: '#8B95B0',
   textTertiary: '#5A6380',
   textInverse: '#0A0E1A',
 
-  // Borders
   border: '#252D45',
   borderLight: '#1E2540',
 
-  // Misc
+  // Aliases used across components
+  textPrimary: '#FFFFFF',
+  textMuted: '#5A6380',
+  green: '#4CAF50',
+  red: '#EF5350',
+
   white: '#FFFFFF',
   black: '#000000',
   transparent: 'transparent',
 } as const;
 
-// ─── Spacing scale ───
+export const FontSize = {
+  xs: 11,
+  sm: 13,
+  md: 15,
+  lg: 18,
+  xl: 22,
+  xxl: 28,
+} as const;
+
 export const Spacing = {
   xs: 4,
   sm: 8,
@@ -54,7 +62,6 @@ export const Spacing = {
   xxxxl: 40,
 } as const;
 
-// ─── Border radii ───
 export const Radius = {
   sm: 8,
   md: 12,
@@ -63,7 +70,6 @@ export const Radius = {
   full: 9999,
 } as const;
 
-// ─── Typography ───
 export const Typography = {
   h1: {
     fontSize: 28,
@@ -120,7 +126,6 @@ export const Typography = {
   },
 } as const;
 
-// ─── Shadows ───
 export const Shadows = Platform.select({
   ios: {
     card: {

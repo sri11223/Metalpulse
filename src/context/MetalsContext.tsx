@@ -1,15 +1,6 @@
-/**
- * MetalsContext — Global cache for metal prices & INR rate
- *
- * - Caches last successful response per metal
- * - Stores INR exchange rate (fetched once per session)
- * - Provides freshness check (5-minute window)
- * - Refresh trigger to coordinate refetch from tiles
- */
-
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
-import { MetalCode, GoldApiResponse, CachedMetal, MetalsContextType } from '../api/types';
-import { fetchInrRate } from '../api/inrApi';
+import { MetalCode, GoldApiResponse, CachedMetal, MetalsContextType, DisplayCurrency } from '../api/types';
+import { fetchExchangeRates } from '../api/inrApi';
 import { CACHE_MAX_AGE_MS } from '../constants/metals';
 
 const MetalsContext = createContext<MetalsContextType | null>(null);
@@ -21,24 +12,26 @@ export function MetalsProvider({ children }: { children: React.ReactNode }) {
     XPT: null,
     XPD: null,
   });
-  const [inrRate, setInrRate] = useState<number | null>(null);
-  const [inrRateLoading, setInrRateLoading] = useState(true);
+  const [exchangeRates, setExchangeRates] = useState<Record<string, number> | null>(null);
+  const [exchangeRatesLoading, setExchangeRatesLoading] = useState(true);
+  const [selectedCurrency, setSelectedCurrency] = useState<DisplayCurrency>('USD');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const inrFetched = useRef(false);
+  const ratesFetched = useRef(false);
 
-  // Fetch INR rate once on mount
+  // Fetch exchange rates once on mount
   useEffect(() => {
-    if (inrFetched.current) return;
-    inrFetched.current = true;
+    if (ratesFetched.current) return;
+    ratesFetched.current = true;
 
     (async () => {
       try {
-        const rate = await fetchInrRate();
-        setInrRate(rate);
+        const rates = await fetchExchangeRates();
+        setExchangeRates(rates);
       } catch {
-        setInrRate(83.5); // fallback
+        // fallback rates are returned by fetchExchangeRates on failure
+        setExchangeRates({ USD: 1, INR: 83.5, EUR: 0.92, GBP: 0.79, AED: 3.67, JPY: 149.5, CAD: 1.36, AUD: 1.53 });
       } finally {
-        setInrRateLoading(false);
+        setExchangeRatesLoading(false);
       }
     })();
   }, []);
@@ -51,9 +44,7 @@ export function MetalsProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const getCache = useCallback(
-    (code: MetalCode): CachedMetal | null => {
-      return cache[code];
-    },
+    (code: MetalCode): CachedMetal | null => cache[code],
     [cache]
   );
 
@@ -70,23 +61,32 @@ export function MetalsProvider({ children }: { children: React.ReactNode }) {
     setRefreshTrigger((t) => t + 1);
   }, []);
 
+  const getRate = useCallback(
+    (currency: DisplayCurrency): number => {
+      if (currency === 'USD') return 1;
+      if (exchangeRates && exchangeRates[currency]) return exchangeRates[currency];
+      return 1;
+    },
+    [exchangeRates]
+  );
+
   const value: MetalsContextType = {
     cache,
-    inrRate,
-    inrRateLoading,
+    exchangeRates,
+    exchangeRatesLoading,
+    selectedCurrency,
+    setSelectedCurrency,
     setCache: setCacheEntry,
     getCache,
     isCacheFresh,
     refreshAll,
     refreshTrigger,
+    getRate,
   };
 
   return <MetalsContext.Provider value={value}>{children}</MetalsContext.Provider>;
 }
 
-/**
- * Hook to consume MetalsContext
- */
 export function useMetals(): MetalsContextType {
   const ctx = useContext(MetalsContext);
   if (!ctx) {

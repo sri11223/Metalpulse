@@ -1,82 +1,77 @@
-/**
- * HomeScreen — 2×2 grid of metal tiles with header, pull-to-refresh, market status
- */
-
-import React, { useCallback, useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   RefreshControl,
   TouchableOpacity,
+  Modal,
+  StyleSheet,
   StatusBar,
+  Platform,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors, Spacing, Radius, Typography, Shadows } from '../constants/theme';
-import { METALS } from '../constants/metals';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { METALS, CURRENCIES, CURRENCY_MAP } from '../constants/metals';
 import { useMetals } from '../context/MetalsContext';
+import { DisplayCurrency } from '../api/types';
 import MetalTile from '../components/MetalTile';
 import MarketStatus from '../components/MarketStatus';
+import { Colors, FontSize, Spacing, Radius, Shadows } from '../constants/theme';
 
 export default function HomeScreen() {
-  const insets = useSafeAreaInsets();
-  const { refreshAll } = useMetals();
+  const { refreshAll, selectedCurrency, setSelectedCurrency } = useMetals();
   const [refreshing, setRefreshing] = useState(false);
+  const [currencyModalVisible, setCurrencyModalVisible] = useState(false);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     refreshAll();
-    // Small delay so the user sees the refresh indicator
-    setTimeout(() => setRefreshing(false), 1200);
+    // Give tiles time to refetch
+    setTimeout(() => setRefreshing(false), 2000);
   }, [refreshAll]);
 
-  const handleManualRefresh = () => {
-    refreshAll();
+  const currentCurrency = CURRENCY_MAP[selectedCurrency];
+
+  const handleCurrencySelect = (code: DisplayCurrency) => {
+    setSelectedCurrency(code);
+    setCurrencyModalVisible(false);
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <StatusBar barStyle="light-content" backgroundColor={Colors.bg} />
 
-      {/* Header */}
+      {/* ── Header ── */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <View style={styles.logoBadge}>
-            <Ionicons name="diamond" size={18} color={Colors.primary} />
-          </View>
-          <View>
-            <Text style={styles.headerTitle}>MetalPulse</Text>
-            <Text style={styles.headerSubtitle}>Live Precious Metals</Text>
-          </View>
+          <Text style={styles.appName}>MetalPulse</Text>
+          <Text style={styles.tagline}>Live Precious Metal Prices</Text>
         </View>
-        <TouchableOpacity
-          style={styles.refreshButton}
-          onPress={handleManualRefresh}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="refresh" size={20} color={Colors.text} />
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <MarketStatus />
+          <TouchableOpacity
+            style={styles.currencyBtn}
+            onPress={() => setCurrencyModalVisible(true)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.currencyFlag}>{currentCurrency.flag}</Text>
+            <Text style={styles.currencyCode}>{selectedCurrency}</Text>
+            <Text style={styles.currencyChevron}>▼</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* Market Status */}
-      <MarketStatus />
-
-      {/* Grid */}
+      {/* ── Metal Grid ── */}
       <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[
-          styles.gridContent,
-          { paddingBottom: insets.bottom + Spacing.xxl },
-        ]}
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor={Colors.primary}
-            colors={[Colors.primary]}
+            tintColor={Colors.accent}
+            colors={[Colors.accent]}
             progressBackgroundColor={Colors.bgCard}
           />
         }
@@ -89,88 +84,199 @@ export default function HomeScreen() {
           ))}
         </View>
 
-        {/* Footer */}
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            Prices from GoldAPI.io · Tap a tile for details
-          </Text>
-          <Text style={styles.footerText}>
-            Pull down to refresh all tiles
+            Pull down to refresh • Data from GoldAPI.io
           </Text>
         </View>
       </ScrollView>
-    </View>
+
+      {/* ── Currency Picker Modal ── */}
+      <Modal
+        visible={currencyModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setCurrencyModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setCurrencyModalVisible(false)}
+        >
+          <View style={styles.modalContent}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Select Currency</Text>
+
+            {CURRENCIES.map((curr) => {
+              const isActive = curr.code === selectedCurrency;
+              return (
+                <TouchableOpacity
+                  key={curr.code}
+                  style={[styles.currencyOption, isActive && styles.currencyOptionActive]}
+                  onPress={() => handleCurrencySelect(curr.code)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.optionFlag}>{curr.flag}</Text>
+                  <View style={styles.optionInfo}>
+                    <Text style={[styles.optionCode, isActive && styles.optionCodeActive]}>
+                      {curr.code}
+                    </Text>
+                    <Text style={styles.optionName}>{curr.name}</Text>
+                  </View>
+                  <Text style={styles.optionSymbol}>{curr.symbol}</Text>
+                  {isActive && <Text style={styles.check}>✓</Text>}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: Colors.bg,
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: Spacing.lg,
+    alignItems: 'flex-start',
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.md,
   },
-  headerLeft: {
+  headerLeft: {},
+  appName: {
+    fontSize: FontSize.xxl,
+    fontWeight: '800',
+    color: Colors.accent,
+    letterSpacing: -0.5,
+  },
+  tagline: {
+    fontSize: FontSize.xs,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  headerRight: {
+    alignItems: 'flex-end',
+    gap: Spacing.sm,
+  },
+  currencyBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.md,
-  },
-  logoBadge: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.md,
-    backgroundColor: Colors.primaryDim,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    ...Typography.h2,
-    fontSize: 20,
-    color: Colors.text,
-  },
-  headerSubtitle: {
-    ...Typography.caption,
-    fontSize: 11,
-  },
-  refreshButton: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.md,
     backgroundColor: Colors.bgCard,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: Radius.md,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     borderWidth: 1,
     borderColor: Colors.border,
+    gap: 6,
   },
-  scrollView: {
-    flex: 1,
+  currencyFlag: { fontSize: 16 },
+  currencyCode: {
+    fontSize: FontSize.sm,
+    fontWeight: '700',
+    color: Colors.textPrimary,
   },
-  gridContent: {
+  currencyChevron: {
+    fontSize: 8,
+    color: Colors.textMuted,
+  },
+  scroll: { flex: 1 },
+  scrollContent: {
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.lg,
+    paddingBottom: Spacing.xxl,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.md,
+    marginTop: Spacing.sm,
   },
   tileWrapper: {
-    width: '48%',
+    width: '47.5%',
     flexGrow: 1,
   },
   footer: {
-    paddingVertical: Spacing.xxxl,
     alignItems: 'center',
-    gap: Spacing.xs,
+    marginTop: Spacing.xl,
+    paddingBottom: Spacing.lg,
   },
   footerText: {
-    ...Typography.label,
-    fontSize: 10,
-    textAlign: 'center',
+    fontSize: FontSize.xs,
+    color: Colors.textMuted,
+  },
+
+  // ── Modal ──
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: Colors.bgCard,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: Platform.OS === 'ios' ? 40 : Spacing.xl,
+    paddingTop: Spacing.md,
+  },
+  modalHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.border,
+    alignSelf: 'center',
+    marginBottom: Spacing.lg,
+  },
+  modalTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: Spacing.lg,
+  },
+  currencyOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.md,
+    marginBottom: 4,
+    gap: Spacing.md,
+  },
+  currencyOptionActive: {
+    backgroundColor: Colors.accent + '15',
+    borderWidth: 1,
+    borderColor: Colors.accent + '30',
+  },
+  optionFlag: { fontSize: 24 },
+  optionInfo: { flex: 1 },
+  optionCode: {
+    fontSize: FontSize.md,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  optionCodeActive: {
+    color: Colors.accent,
+  },
+  optionName: {
+    fontSize: FontSize.xs,
+    color: Colors.textSecondary,
+    marginTop: 1,
+  },
+  optionSymbol: {
+    fontSize: FontSize.md,
+    color: Colors.textMuted,
+    fontWeight: '600',
+    minWidth: 30,
+    textAlign: 'right',
+  },
+  check: {
+    fontSize: FontSize.md,
+    color: Colors.accent,
+    fontWeight: '700',
   },
 });

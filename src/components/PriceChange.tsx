@@ -1,20 +1,15 @@
-/**
- * PriceChange — ▲/▼ % badge
- *
- * Reused on both home tiles and detail page.
- * Green ▲ for positive, Red ▼ for negative.
- */
-
 import React from 'react';
 import { View, Text, StyleSheet, ViewStyle } from 'react-native';
-import { Colors, Radius, Spacing, Typography } from '../constants/theme';
+import { Colors, Radius, Spacing } from '../constants/theme';
 import { formatPercent, formatDollarChange } from '../utils/formatPrice';
+import { DisplayCurrency } from '../api/types';
 
 interface PriceChangeProps {
   percentChange: number;
   dollarChange?: number;
   size?: 'sm' | 'md' | 'lg';
   showDollarChange?: boolean;
+  currency?: DisplayCurrency;
   style?: ViewStyle;
 }
 
@@ -23,20 +18,21 @@ export default function PriceChange({
   dollarChange,
   size = 'sm',
   showDollarChange = false,
+  currency = 'USD',
   style,
 }: PriceChangeProps) {
   const isPositive = percentChange >= 0;
   const arrow = isPositive ? '▲' : '▼';
   const color = isPositive ? Colors.success : Colors.danger;
   const bgColor = isPositive ? Colors.successDim : Colors.dangerDim;
-
   const fontSize = size === 'lg' ? 16 : size === 'md' ? 14 : 12;
 
   return (
     <View style={[styles.container, { backgroundColor: bgColor }, style]}>
       <Text style={[styles.text, { color, fontSize }]}>
-        {arrow} {showDollarChange && dollarChange !== undefined
-          ? `${formatDollarChange(dollarChange)} · `
+        {arrow}{' '}
+        {showDollarChange && dollarChange !== undefined
+          ? `${formatDollarChange(dollarChange, currency)} · `
           : ''}
         {formatPercent(percentChange)}
       </Text>
@@ -53,7 +49,5 @@ const styles = StyleSheet.create({
     borderRadius: Radius.sm,
     alignSelf: 'flex-start',
   },
-  text: {
-    fontWeight: '600',
-  },
+  text: { fontWeight: '600' },
 });

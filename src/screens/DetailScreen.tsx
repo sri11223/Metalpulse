@@ -1,307 +1,316 @@
-/**
- * DetailScreen — Full detail view for a single metal
- *
- * Shows: hero price, change badge, sparkline chart, OHLC grid,
- * gram prices, kg price, INR conversion
- */
-
 import React from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   ScrollView,
   TouchableOpacity,
-  StatusBar,
+  StyleSheet,
+  ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { MetalSlug, MetalCode } from '../api/types';
-import { Colors, Spacing, Radius, Typography, Shadows } from '../constants/theme';
-import { METAL_BY_SLUG } from '../constants/metals';
+import { METAL_BY_SLUG, CURRENCY_MAP } from '../constants/metals';
 import { useMetalPrice } from '../hooks/useMetalPrice';
 import { useMetals } from '../context/MetalsContext';
-import { formatUSD } from '../utils/formatPrice';
-import { formatFullTimestamp, isStale } from '../utils/formatTime';
+import { convertPrice } from '../utils/priceCalc';
+import { formatCurrency } from '../utils/formatPrice';
+import { timeAgo } from '../utils/formatTime';
 import PriceChange from '../components/PriceChange';
 import SparklineChart from '../components/SparklineChart';
 import OHLCGrid from '../components/OHLCGrid';
 import GramPriceRow from '../components/GramPriceRow';
-import SkeletonLoader from '../components/SkeletonLoader';
-import ErrorTile from '../components/ErrorTile';
-
-// Mock sparkline data — 7 points simulating weekly trend
-function generateMockSparkline(currentPrice: number, changePercent: number): number[] {
-  const volatility = currentPrice * 0.008;
-  const direction = changePercent >= 0 ? 1 : -1;
-  const points: number[] = [];
-  let p = currentPrice - direction * volatility * 3;
-  for (let i = 0; i < 7; i++) {
-    const noise = (Math.random() - 0.5) * volatility;
-    p += direction * volatility * 0.6 + noise;
-    points.push(p);
-  }
-  // Ensure last point equals current price
-  points[6] = currentPrice;
-  return points;
-}
+import { Colors, FontSize, Spacing, Radius, Shadows } from '../constants/theme';
 
 export default function DetailScreen() {
-  const { metal: metalParam } = useLocalSearchParams<{ metal: string }>();
+  const { metal: slug } = useLocalSearchParams<{ metal: string }>();
   const router = useRouter();
-  const insets = useSafeAreaInsets();
+  const metalConfig = slug ? METAL_BY_SLUG[slug] : undefined;
+  const { selectedCurrency, getRate } = useMetals();
+  const rate = getRate(selectedCurrency);
+  const currencyInfo = CURRENCY_MAP[selectedCurrency];
 
-  const slug = (metalParam ?? 'gold') as MetalSlug;
-  const metalConfig = METAL_BY_SLUG[slug];
-
-  const { state, retry } = useMetalPrice(metalConfig?.code as MetalCode);
-  const { inrRate } = useMetals();
+  const { state, retry } = useMetalPrice(metalConfig?.code ?? 'XAU');
 
   if (!metalConfig) {
     return (
-      <View style={[styles.container, { paddingTop: insets.top }]}>
+      <SafeAreaView style={styles.centered}>
         <Text style={styles.errorText}>Metal not found</Text>
-      </View>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Text style={styles.backLink}>← Go back</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
     );
   }
 
   const data = state.data;
-  const sparkline = data ? generateMockSparkline(data.price, data.chp) : [];
+
+  // Generate mock sparkline from OHLC data
+  const sparkData = data
+    ? [
+        data.open_price,
+        data.low_price,
+        (data.open_price + data.high_price) / 2,
+        data.high_price,
+        (data.high_price + data.low_price) / 2,
+        data.price,
+      ]
+    : [];
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <StatusBar barStyle="light-content" backgroundColor={Colors.bg} />
-
-      {/* Header */}
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      {/* ── Header ── */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="chevron-back" size={24} color={Colors.text} />
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Text style={styles.backArrow}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{metalConfig.name}</Text>
-        <View style={styles.headerRight} />
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>{metalConfig.name}</Text>
+          <Text style={styles.headerSub}>
+            {metalConfig.symbol} • {metalConfig.purity}
+          </Text>
+        </View>
+        <View style={styles.headerBadge}>
+          <Text style={styles.badgeText}>{currencyInfo.flag} {selectedCurrency}</Text>
+        </View>
       </View>
 
-      {/* Loading */}
-      {(state.status === 'idle' || state.status === 'loading') && (
-        <View style={styles.loadingContainer}>
-          <SkeletonLoader lines={6} />
+      {/* ── Content ── */}
+      {state.status === 'loading' && !data && (
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color={metalConfig.color} />
+          <Text style={styles.loadingText}>Fetching live prices…</Text>
         </View>
       )}
 
-      {/* Error */}
-      {state.status === 'error' && (
-        <View style={styles.errorContainer}>
-          <ErrorTile
-            message={state.error ?? 'Failed to load'}
-            retryable={state.errorRetryable}
-            onRetry={retry}
-            metalName={metalConfig.name}
-          />
+      {state.status === 'error' && !data && (
+        <View style={styles.centered}>
+          <Text style={styles.errorEmoji}>⚠️</Text>
+          <Text style={styles.errorText}>{state.error}</Text>
+          {state.errorRetryable && (
+            <TouchableOpacity style={styles.retryBtn} onPress={retry}>
+              <Text style={styles.retryText}>Retry</Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
-      {/* Success */}
-      {state.status === 'success' && data && (
+      {data && (
         <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingBottom: insets.bottom + Spacing.xxxl },
-          ]}
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Hero Section */}
-          <View style={styles.heroSection}>
-            {/* Metal identity */}
-            <View style={styles.metalIdentity}>
-              <View style={[styles.metalIcon, { backgroundColor: metalConfig.color + '20' }]}>
-                <Text style={[styles.metalSymbol, { color: metalConfig.color }]}>
-                  {metalConfig.symbol}
+          {/* ── Price Hero ── */}
+          <View style={[styles.priceCard, Shadows.card]}>
+            <View style={[styles.priceAccent, { backgroundColor: metalConfig.color }]} />
+            <View style={styles.priceInner}>
+              <Text style={styles.priceLabel}>Troy Ounce</Text>
+              <Text style={[styles.priceValue, { color: metalConfig.color }]}>
+                {formatCurrency(convertPrice(data.price, rate), selectedCurrency)}
+              </Text>
+              <PriceChange percentChange={data.chp} dollarChange={data.ch * rate} showDollarChange currency={selectedCurrency} />
+
+              {state.lastFetched && (
+                <Text style={styles.updatedAt}>
+                  Updated {timeAgo(state.lastFetched / 1000)}
                 </Text>
-              </View>
-              <View>
-                <Text style={styles.metalName}>
-                  {metalConfig.name} · {data.metal}/{data.currency}
-                </Text>
-                <Text style={styles.metalPurity}>{metalConfig.purity}</Text>
-              </View>
+              )}
             </View>
 
-            {/* Stale warning */}
-            {isStale(data.timestamp) && (
-              <View style={styles.staleWarning}>
-                <Text style={styles.staleText}>⚠️ Data may be outdated</Text>
-              </View>
-            )}
-
-            {/* Hero price */}
-            <Text style={styles.heroPrice}>{formatUSD(data.price)}</Text>
-            <Text style={styles.heroPriceLabel}>per troy ounce</Text>
-
-            {/* Change badge */}
-            <PriceChange
-              percentChange={data.chp}
-              dollarChange={data.ch}
-              showDollarChange
-              size="lg"
-              style={styles.changeBadge}
-            />
-
-            {/* Timestamp */}
-            <Text style={styles.timestamp}>
-              {formatFullTimestamp(data.timestamp)}
-            </Text>
+            <View style={styles.sparkContainer}>
+              <SparklineChart
+                data={sparkData}
+                width={140}
+                height={50}
+                color={metalConfig.color}
+              />
+            </View>
           </View>
 
-          {/* Sparkline Chart */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>7-Day Trend</Text>
-            <SparklineChart
-              data={sparkline}
-              width={340}
-              height={140}
-              color={metalConfig.color}
-              style={styles.chart}
-            />
+          {/* ── Gram Prices (Gold only) ── */}
+          {metalConfig.code === 'XAU' && (
+            <GramPriceRow data={data} rate={rate} currency={selectedCurrency} />
+          )}
+
+          {/* ── OHLC Grid ── */}
+          <OHLCGrid data={data} rate={rate} currency={selectedCurrency} />
+
+          {/* ── Extra Info ── */}
+          <View style={styles.infoCard}>
+            <Text style={styles.infoTitle}>About {metalConfig.name}</Text>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Exchange</Text>
+              <Text style={styles.infoValue}>{data.exchange || 'N/A'}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Symbol</Text>
+              <Text style={styles.infoValue}>{data.symbol}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Purity</Text>
+              <Text style={styles.infoValue}>{metalConfig.purity}</Text>
+            </View>
           </View>
-
-          {/* OHLC Grid */}
-          <OHLCGrid data={data} />
-
-          {/* Gram / Kg / INR Prices */}
-          <GramPriceRow data={data} metalSlug={slug} inrRate={inrRate} />
         </ScrollView>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safe: { flex: 1, backgroundColor: Colors.bg },
+  centered: {
     flex: 1,
     backgroundColor: Colors.bg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.xl,
   },
+
+  // ── Header ──
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
   },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: Radius.md,
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: Radius.sm,
     backgroundColor: Colors.bgCard,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: Colors.border,
   },
+  backArrow: { fontSize: 18, color: Colors.textPrimary },
+  headerCenter: { flex: 1, marginLeft: Spacing.md },
   headerTitle: {
-    ...Typography.h3,
+    fontSize: FontSize.lg,
+    fontWeight: '700',
+    color: Colors.textPrimary,
   },
-  headerRight: {
-    width: 40,
+  headerSub: {
+    fontSize: FontSize.xs,
+    color: Colors.textSecondary,
+    marginTop: 1,
   },
-  loadingContainer: {
-    flex: 1,
-    padding: Spacing.xxl,
+  headerBadge: {
+    backgroundColor: Colors.bgCard,
+    borderRadius: Radius.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
-  errorContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: Spacing.xxl,
+  badgeText: {
+    fontSize: FontSize.xs,
+    color: Colors.textSecondary,
+    fontWeight: '600',
   },
-  errorText: {
-    ...Typography.body,
-    color: Colors.danger,
-    textAlign: 'center',
-    marginTop: 100,
-  },
-  scrollView: {
-    flex: 1,
-  },
+
+  scroll: { flex: 1 },
   scrollContent: {
-    paddingHorizontal: Spacing.lg,
-    gap: Spacing.lg,
+    padding: Spacing.lg,
+    paddingBottom: Spacing.xxl,
   },
-  heroSection: {
+
+  // ── Price Card ──
+  priceCard: {
     backgroundColor: Colors.bgCard,
     borderRadius: Radius.lg,
-    padding: Spacing.xl,
+    overflow: 'hidden',
     borderWidth: 1,
     borderColor: Colors.border,
-    ...Shadows.card,
   },
-  metalIdentity: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    marginBottom: Spacing.lg,
+  priceAccent: { height: 3, width: '100%' },
+  priceInner: { padding: Spacing.lg },
+  priceLabel: {
+    fontSize: FontSize.xs,
+    color: Colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: Spacing.xs,
   },
-  metalIcon: {
-    width: 48,
-    height: 48,
+  priceValue: {
+    fontSize: 36,
+    fontWeight: '800',
+    marginBottom: Spacing.xs,
+  },
+  updatedAt: {
+    fontSize: FontSize.xs,
+    color: Colors.textMuted,
+    marginTop: Spacing.sm,
+  },
+  sparkContainer: {
+    position: 'absolute',
+    right: Spacing.lg,
+    top: Spacing.xl + 10,
+  },
+
+  // ── Loading / Error ──
+  loadingText: {
+    color: Colors.textSecondary,
+    fontSize: FontSize.sm,
+    marginTop: Spacing.md,
+  },
+  errorEmoji: { fontSize: 40, marginBottom: Spacing.md },
+  errorText: {
+    color: Colors.textSecondary,
+    fontSize: FontSize.md,
+    textAlign: 'center',
+  },
+  retryBtn: {
+    backgroundColor: Colors.accent,
     borderRadius: Radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    marginTop: Spacing.lg,
   },
-  metalSymbol: {
-    fontSize: 22,
+  retryText: {
+    color: Colors.bg,
     fontWeight: '700',
+    fontSize: FontSize.sm,
   },
-  metalName: {
-    ...Typography.bodyBold,
+  backLink: {
+    color: Colors.accent,
+    fontSize: FontSize.md,
+    marginTop: Spacing.md,
+    fontWeight: '600',
   },
-  metalPurity: {
-    ...Typography.caption,
-  },
-  staleWarning: {
-    backgroundColor: Colors.warningDim,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radius.sm,
-    alignSelf: 'flex-start',
-    marginBottom: Spacing.md,
-  },
-  staleText: {
-    ...Typography.caption,
-    color: Colors.warning,
-    fontSize: 11,
-  },
-  heroPrice: {
-    ...Typography.heroPrice,
-    marginBottom: 2,
-  },
-  heroPriceLabel: {
-    ...Typography.caption,
-    marginBottom: Spacing.md,
-  },
-  changeBadge: {
-    marginBottom: Spacing.md,
-  },
-  timestamp: {
-    ...Typography.label,
-    fontSize: 10,
-  },
-  section: {
+
+  // ── Info Card ──
+  infoCard: {
     backgroundColor: Colors.bgCard,
     borderRadius: Radius.lg,
     padding: Spacing.lg,
+    marginTop: Spacing.lg,
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  sectionTitle: {
-    ...Typography.h3,
+  infoTitle: {
+    fontSize: FontSize.md,
+    fontWeight: '700',
+    color: Colors.textPrimary,
     marginBottom: Spacing.md,
   },
-  chart: {
-    alignSelf: 'center',
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  infoLabel: {
+    fontSize: FontSize.sm,
+    color: Colors.textMuted,
+  },
+  infoValue: {
+    fontSize: FontSize.sm,
+    color: Colors.textPrimary,
+    fontWeight: '600',
   },
 });

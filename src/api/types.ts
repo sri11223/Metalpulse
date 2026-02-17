@@ -21,13 +21,22 @@ export interface GoldApiResponse {
   price_gram_18k: number;
 }
 
-// ─── Exchange rate response ───
-export interface ExchangeRateResponse {
+// ─── Exchange rate API response (latest endpoint) ───
+export interface ExchangeRateLatestResponse {
   result: string;
   base_code: string;
-  target_code: string;
-  conversion_rate: number;
   time_last_update_utc: string;
+  conversion_rates: Record<string, number>;
+}
+
+// ─── Supported display currencies ───
+export type DisplayCurrency = 'USD' | 'INR' | 'EUR' | 'GBP' | 'AED' | 'JPY' | 'CAD' | 'AUD';
+
+export interface CurrencyInfo {
+  code: DisplayCurrency;
+  symbol: string;
+  name: string;
+  flag: string;
 }
 
 // ─── Metal identifier ───
@@ -72,14 +81,14 @@ export interface CachedMetal {
 // ─── Context shape ───
 export interface MetalsContextType {
   cache: Record<MetalCode, CachedMetal | null>;
-  inrRate: number | null;
-  inrRateLoading: boolean;
+  exchangeRates: Record<string, number> | null;
+  exchangeRatesLoading: boolean;
+  selectedCurrency: DisplayCurrency;
+  setSelectedCurrency: (c: DisplayCurrency) => void;
   setCache: (code: MetalCode, data: GoldApiResponse) => void;
   getCache: (code: MetalCode) => CachedMetal | null;
   isCacheFresh: (code: MetalCode, maxAgeMs?: number) => boolean;
   refreshAll: () => void;
   refreshTrigger: number;
+  getRate: (currency: DisplayCurrency) => number;
 }
-
-// ─── App lock ───
-export type AppLockMethod = 'pin' | 'biometric' | 'none';

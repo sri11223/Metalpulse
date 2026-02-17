@@ -1,21 +1,8 @@
-/**
- * useMetalPrice — Per-tile hook with full state machine
- *
- * Uses useReducer to manage loading/success/error states independently.
- * Fetches from GoldAPI.io, caches in MetalsContext, respects cache freshness.
- */
-
 import { useReducer, useCallback, useEffect, useRef } from 'react';
-import {
-  MetalCode,
-  MetalPriceState,
-  MetalPriceAction,
-  GoldApiResponse,
-} from '../api/types';
+import { MetalCode, MetalPriceState, MetalPriceAction, GoldApiResponse } from '../api/types';
 import { fetchMetalPrice, ApiError } from '../api/goldApi';
 import { useMetals } from '../context/MetalsContext';
 
-// ─── Reducer ───
 const initialState: MetalPriceState = {
   status: 'idle',
   data: null,
@@ -50,13 +37,7 @@ function reducer(state: MetalPriceState, action: MetalPriceAction): MetalPriceSt
   }
 }
 
-interface UseMetalPriceReturn {
-  state: MetalPriceState;
-  fetch: () => void;
-  retry: () => void;
-}
-
-export function useMetalPrice(metalCode: MetalCode): UseMetalPriceReturn {
+export function useMetalPrice(metalCode: MetalCode) {
   const [state, dispatch] = useReducer(reducer, initialState);
   const { setCache, getCache, isCacheFresh, refreshTrigger } = useMetals();
   const mountedRef = useRef(true);
@@ -64,17 +45,13 @@ export function useMetalPrice(metalCode: MetalCode): UseMetalPriceReturn {
 
   useEffect(() => {
     mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
+    return () => { mountedRef.current = false; };
   }, []);
 
   const doFetch = useCallback(
     async (force: boolean = false) => {
-      // Avoid duplicate simultaneous fetches
       if (fetchingRef.current) return;
 
-      // Check cache freshness (skip fetch if fresh and not forced)
       if (!force && isCacheFresh(metalCode)) {
         const cached = getCache(metalCode);
         if (cached) {
@@ -88,7 +65,6 @@ export function useMetalPrice(metalCode: MetalCode): UseMetalPriceReturn {
 
       try {
         const data: GoldApiResponse = await fetchMetalPrice(metalCode);
-
         if (mountedRef.current) {
           dispatch({ type: 'FETCH_SUCCESS', payload: data });
           setCache(metalCode, data);
@@ -96,15 +72,9 @@ export function useMetalPrice(metalCode: MetalCode): UseMetalPriceReturn {
       } catch (err) {
         if (mountedRef.current) {
           if (err instanceof ApiError) {
-            dispatch({
-              type: 'FETCH_ERROR',
-              payload: { message: err.message, retryable: err.retryable },
-            });
+            dispatch({ type: 'FETCH_ERROR', payload: { message: err.message, retryable: err.retryable } });
           } else {
-            dispatch({
-              type: 'FETCH_ERROR',
-              payload: { message: 'An unexpected error occurred', retryable: true },
-            });
+            dispatch({ type: 'FETCH_ERROR', payload: { message: 'An unexpected error occurred', retryable: true } });
           }
         }
       } finally {
@@ -115,11 +85,9 @@ export function useMetalPrice(metalCode: MetalCode): UseMetalPriceReturn {
   );
 
   // Auto-fetch on mount
-  useEffect(() => {
-    doFetch(false);
-  }, [doFetch]);
+  useEffect(() => { doFetch(false); }, [doFetch]);
 
-  // Re-fetch when refreshTrigger changes (pull-to-refresh / manual refresh)
+  // Re-fetch on refresh trigger
   const prevTrigger = useRef(refreshTrigger);
   useEffect(() => {
     if (refreshTrigger !== prevTrigger.current) {
@@ -128,13 +96,7 @@ export function useMetalPrice(metalCode: MetalCode): UseMetalPriceReturn {
     }
   }, [refreshTrigger, doFetch]);
 
-  const retry = useCallback(() => {
-    doFetch(true);
-  }, [doFetch]);
+  const retry = useCallback(() => { doFetch(true); }, [doFetch]);
 
-  return {
-    state,
-    fetch: () => doFetch(true),
-    retry,
-  };
+  return { state, fetch: () => doFetch(true), retry };
 }

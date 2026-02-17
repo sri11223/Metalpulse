@@ -1,11 +1,3 @@
-/**
- * AppLock — PIN entry screen with biometric support
- *
- * First launch: user sets a 4-digit PIN stored in SecureStore
- * Subsequent launches: user enters PIN or uses biometric unlock
- * Professional lock screen with keypad UI
- */
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
@@ -13,168 +5,242 @@ import {
   TouchableOpacity,
   StyleSheet,
   Animated,
+  ActivityIndicator,
   Vibration,
-  Platform,
+  Dimensions,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
 import * as LocalAuthentication from 'expo-local-authentication';
-import { Colors, Spacing, Radius, Typography } from '../constants/theme';
+import { Colors, FontSize, Spacing, Radius } from '../constants/theme';
 
-const PIN_KEY = 'metalpulse_pin';
+/* ── Safe SecureStore wrappers ── */
+
+const PIN_KEY = 'metalpulse_app_pin_v3';
 const PIN_LENGTH = 4;
 
-interface AppLockProps {
-  onUnlock: () => void;
+async function safeGetItem(key: string): Promise<string | null> {
+  try {
+    return await SecureStore.getItemAsync(key);
+  } catch (e: any) {
+    const msg = typeof e?.message === 'string' ? e.message : '';
+    if (msg.includes('cannot be cast') || msg.includes('ClassCastException')) {
+      try { await SecureStore.deleteItemAsync(key); } catch { /* noop */ }
+    }
+    return null;
+  }
 }
 
-type LockMode = 'loading' | 'set_pin' | 'confirm_pin' | 'enter_pin';
+async function safeSetItem(key: string, value: string): Promise<boolean> {
+  try {
+    await SecureStore.setItemAsync(key, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
-export default function AppLock({ onUnlock }: AppLockProps) {
-  const [mode, setMode] = useState<LockMode>('loading');
+/* ── Dialpad Key ── */
+
+interface DialKeyProps {
+  label: string;
+  sub?: string;
+  onPress: () => void;
+  wide?: boolean;
+  accent?: boolean;
+}
+
+function DialKey({ label, sub, onPress, wide, accent }: DialKeyProps) {
+  return (
+    <TouchableOpacity
+      style={[
+        dStyles.key,
+        wide && dStyles.keyWide,
+        accent && dStyles.keyAccent,
+      ]}
+      activeOpacity={0.5}
+      onPress={onPress}
+    >
+      <Text style={[dStyles.keyLabel, accent && dStyles.keyLabelAccent]}>
+        {label}
+      </Text>
+      {!!sub && <Text style={dStyles.keySub}>{sub}</Text>}
+    </TouchableOpacity>
+  );
+}
+
+const SCREEN_W = Dimensions.get('window').width;
+const KEY_SIZE = Math.min((SCREEN_W - 80) / 3, 80);
+
+const dStyles = StyleSheet.create({
+  key: {
+    width: KEY_SIZE,
+    height: KEY_SIZE,
+    borderRadius: KEY_SIZE / 2,
+    backgroundColor: Colors.bgCard,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin: 8,
+  },
+  keyWide: { backgroundColor: 'transparent', borderWidth: 0 },
+  keyAccent: { backgroundColor: Colors.accent + '20', borderColor: Colors.accent + '40' },
+  keyLabel: { fontSize: 28, fontWeight: '600', color: Colors.textPrimary },
+  keyLabelAccent: { color: Colors.accent, fontSize: 18 },
+  keySub: { fontSize: 9, color: Colors.textSecondary, marginTop: 1, letterSpacing: 2 },
+});
+
+/* ── Main Component ── */
+
+interface AppLockProps { children: React.ReactNode }
+type Mode = 'loading' | 'setup' | 'confirm' | 'unlock';
+
+export default function AppLock({ children }: AppLockProps) {
+  const [mode, setMode] = useState<Mode>('loading');
   const [pin, setPin] = useState('');
-  const [newPin, setNewPin] = useState('');
+  const [setupPin, setSetupPin] = useState('');
   const [error, setError] = useState('');
-  const [hasBiometric, setHasBiometric] = useState(false);
+  const [unlocked, setUnlocked] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
 
-  // Check if PIN exists & biometric available
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1, duration: 400, useNativeDriver: true,
+    }).start();
+  }, [fadeAnim]);
+
   useEffect(() => {
     (async () => {
-      try {
-        const stored = await SecureStore.getItemAsync(PIN_KEY);
-        const bioAvailable = await LocalAuthentication.hasHardwareAsync();
-        const bioEnrolled = await LocalAuthentication.isEnrolledAsync();
-        setHasBiometric(bioAvailable && bioEnrolled);
-
-        if (stored) {
-          setMode('enter_pin');
-          // Try biometric first
-          if (bioAvailable && bioEnrolled) {
-            attemptBiometric();
-          }
-        } else {
-          setMode('set_pin');
-        }
-      } catch {
-        setMode('set_pin');
+      const stored = await safeGetItem(PIN_KEY);
+      if (stored) {
+        setMode('unlock');
+        attemptBiometric();
+      } else {
+        setMode('setup');
       }
     })();
   }, []);
 
-  const attemptBiometric = async () => {
-    try {
-      const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Unlock MetalPulse',
-        cancelLabel: 'Use PIN',
-        disableDeviceFallback: true,
-      });
-      if (result.success) {
-        onUnlock();
-      }
-    } catch {
-      // Biometric failed — user will use PIN
-    }
-  };
-
-  const shakeError = useCallback(() => {
-    Vibration.vibrate(100);
+  const shake = useCallback(() => {
+    Vibration.vibrate(80);
     Animated.sequence([
-      Animated.timing(shakeAnim, { toValue: 15, duration: 50, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -15, duration: 50, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 10, duration: 50, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: -10, duration: 50, useNativeDriver: true }),
-      Animated.timing(shakeAnim, { toValue: 0, duration: 50, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 15, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -15, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 10, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: -10, duration: 60, useNativeDriver: true }),
+      Animated.timing(shakeAnim, { toValue: 0, duration: 60, useNativeDriver: true }),
     ]).start();
   }, [shakeAnim]);
 
-  const handleDigit = (digit: string) => {
+  const attemptBiometric = useCallback(async () => {
+    try {
+      const hasHw = await LocalAuthentication.hasHardwareAsync();
+      const enrolled = await LocalAuthentication.isEnrolledAsync();
+      if (hasHw && enrolled) {
+        const result = await LocalAuthentication.authenticateAsync({
+          promptMessage: 'Unlock MetalPulse',
+          fallbackLabel: 'Use PIN',
+          disableDeviceFallback: false,
+        });
+        if (result.success) setUnlocked(true);
+      }
+    } catch { /* noop */ }
+  }, []);
+
+  // Auto-submit when 4 digits entered
+  useEffect(() => {
+    if (pin.length !== PIN_LENGTH) return;
+
+    const timer = setTimeout(async () => {
+      if (mode === 'setup') {
+        setSetupPin(pin);
+        setPin('');
+        setError('');
+        setMode('confirm');
+      } else if (mode === 'confirm') {
+        if (pin !== setupPin) {
+          setError('PINs don\'t match. Try again.');
+          setPin('');
+          shake();
+          return;
+        }
+        const saved = await safeSetItem(PIN_KEY, pin);
+        if (!saved) {
+          setError('Failed to save PIN');
+          setPin('');
+          shake();
+          return;
+        }
+        setUnlocked(true);
+      } else if (mode === 'unlock') {
+        const stored = await safeGetItem(PIN_KEY);
+        if (!stored) {
+          setMode('setup');
+          setPin('');
+          setError('PIN was reset. Set a new one.');
+          return;
+        }
+        if (pin === stored) {
+          setUnlocked(true);
+        } else {
+          setError('Wrong PIN');
+          setPin('');
+          shake();
+        }
+      }
+    }, 150);
+
+    return () => clearTimeout(timer);
+  }, [pin, mode, setupPin, shake]);
+
+  const pressDigit = (d: string) => {
     if (pin.length >= PIN_LENGTH) return;
-    const next = pin + digit;
-    setPin(next);
     setError('');
-
-    if (next.length === PIN_LENGTH) {
-      handlePinComplete(next);
-    }
+    setPin((p) => p + d);
   };
 
-  const handleDelete = () => {
+  const pressDelete = () => {
+    setError('');
     setPin((p) => p.slice(0, -1));
-    setError('');
   };
 
-  const handlePinComplete = async (enteredPin: string) => {
-    if (mode === 'set_pin') {
-      setNewPin(enteredPin);
-      setPin('');
-      setMode('confirm_pin');
-      return;
-    }
-
-    if (mode === 'confirm_pin') {
-      if (enteredPin === newPin) {
-        await SecureStore.setItemAsync(PIN_KEY, newPin);
-        onUnlock();
-      } else {
-        setPin('');
-        setError('PINs do not match. Try again');
-        setMode('set_pin');
-        setNewPin('');
-        shakeError();
-      }
-      return;
-    }
-
-    if (mode === 'enter_pin') {
-      const stored = await SecureStore.getItemAsync(PIN_KEY);
-      if (enteredPin === stored) {
-        onUnlock();
-      } else {
-        setPin('');
-        setError('Wrong PIN. Try again');
-        shakeError();
-      }
-    }
-  };
+  if (unlocked) return <>{children}</>;
 
   if (mode === 'loading') {
     return (
       <View style={styles.container}>
-        <Ionicons name="shield-checkmark" size={48} color={Colors.primary} />
+        <ActivityIndicator size="large" color={Colors.accent} />
       </View>
     );
   }
 
-  const title =
-    mode === 'set_pin'
-      ? 'Create Your PIN'
-      : mode === 'confirm_pin'
-      ? 'Confirm Your PIN'
-      : 'Enter Your PIN';
+  const titles: Record<string, string> = {
+    setup: 'Create PIN',
+    confirm: 'Confirm PIN',
+    unlock: 'Enter PIN',
+  };
+  const subtitles: Record<string, string> = {
+    setup: 'Set a 4-digit PIN to secure MetalPulse',
+    confirm: 'Re-enter your PIN to confirm',
+    unlock: 'Enter your PIN to unlock',
+  };
 
-  const subtitle =
-    mode === 'set_pin'
-      ? 'Set a 4-digit PIN to secure your app'
-      : mode === 'confirm_pin'
-      ? 'Re-enter your PIN to confirm'
-      : 'Enter your PIN to unlock MetalPulse';
+  const dialpadLetters: Record<string, string> = {
+    '2': 'ABC', '3': 'DEF', '4': 'GHI', '5': 'JKL',
+    '6': 'MNO', '7': 'PQRS', '8': 'TUV', '9': 'WXYZ',
+  };
 
   return (
-    <View style={styles.container}>
-      {/* Logo / Icon */}
-      <View style={styles.logoContainer}>
-        <View style={styles.logoBg}>
-          <Ionicons name="shield-checkmark" size={40} color={Colors.primary} />
-        </View>
-        <Text style={styles.appName}>MetalPulse</Text>
+    <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
+      {/* Header */}
+      <View style={styles.lockIcon}>
+        <Text style={styles.lockEmoji}>🛡️</Text>
       </View>
+      <Text style={styles.title}>{titles[mode]}</Text>
+      <Text style={styles.subtitle}>{subtitles[mode]}</Text>
 
-      {/* Title */}
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.subtitle}>{subtitle}</Text>
-
-      {/* PIN dots */}
+      {/* PIN Dots */}
       <Animated.View style={[styles.dotsRow, { transform: [{ translateX: shakeAnim }] }]}>
         {Array.from({ length: PIN_LENGTH }).map((_, i) => (
           <View
@@ -187,56 +253,28 @@ export default function AppLock({ onUnlock }: AppLockProps) {
         ))}
       </Animated.View>
 
-      {/* Error */}
-      {error ? <Text style={styles.error}>{error}</Text> : <View style={styles.errorSpace} />}
+      {!!error && <Text style={styles.error}>{error}</Text>}
 
-      {/* Keypad */}
-      <View style={styles.keypad}>
-        {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'bio', '0', 'del'].map((key) => {
-          if (key === 'bio') {
-            return (
-              <TouchableOpacity
-                key={key}
-                style={styles.key}
-                onPress={hasBiometric && mode === 'enter_pin' ? attemptBiometric : undefined}
-                disabled={!hasBiometric || mode !== 'enter_pin'}
-                activeOpacity={0.6}
-              >
-                {hasBiometric && mode === 'enter_pin' ? (
-                  <Ionicons name="finger-print" size={28} color={Colors.accent} />
-                ) : (
-                  <View />
-                )}
-              </TouchableOpacity>
-            );
-          }
-
-          if (key === 'del') {
-            return (
-              <TouchableOpacity
-                key={key}
-                style={styles.key}
-                onPress={handleDelete}
-                activeOpacity={0.6}
-              >
-                <Ionicons name="backspace-outline" size={28} color={Colors.textSecondary} />
-              </TouchableOpacity>
-            );
-          }
-
-          return (
-            <TouchableOpacity
-              key={key}
-              style={styles.key}
-              onPress={() => handleDigit(key)}
-              activeOpacity={0.6}
-            >
-              <Text style={styles.keyText}>{key}</Text>
-            </TouchableOpacity>
-          );
-        })}
+      {/* Dialpad */}
+      <View style={styles.dialpad}>
+        {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((d) => (
+          <DialKey
+            key={d}
+            label={d}
+            sub={dialpadLetters[d]}
+            onPress={() => pressDigit(d)}
+          />
+        ))}
+        {/* Bottom row: biometric / 0 / delete */}
+        {mode === 'unlock' ? (
+          <DialKey label="🔑" onPress={attemptBiometric} wide />
+        ) : (
+          <View style={{ width: KEY_SIZE + 16 }} />
+        )}
+        <DialKey label="0" onPress={() => pressDigit('0')} />
+        <DialKey label="⌫" onPress={pressDelete} accent />
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -246,38 +284,26 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.bg,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: Spacing.xxl,
+    paddingTop: 40,
   },
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: Spacing.xxxl,
-  },
-  logoBg: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: Colors.primaryDim,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: Spacing.md,
-  },
-  appName: {
-    ...Typography.h2,
-    color: Colors.primary,
-  },
+  lockIcon: { marginBottom: Spacing.sm },
+  lockEmoji: { fontSize: 44 },
   title: {
-    ...Typography.h2,
-    marginBottom: Spacing.sm,
-    textAlign: 'center',
+    fontSize: FontSize.xxl,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: Spacing.xs,
   },
   subtitle: {
-    ...Typography.caption,
+    fontSize: FontSize.sm,
+    color: Colors.textSecondary,
     textAlign: 'center',
-    marginBottom: Spacing.xxl,
+    marginBottom: Spacing.lg,
+    lineHeight: 20,
   },
   dotsRow: {
     flexDirection: 'row',
-    gap: Spacing.lg,
+    gap: 20,
     marginBottom: Spacing.lg,
   },
   dot: {
@@ -285,42 +311,27 @@ const styles = StyleSheet.create({
     height: 16,
     borderRadius: 8,
   },
-  dotFilled: {
-    backgroundColor: Colors.primary,
-  },
   dotEmpty: {
-    backgroundColor: Colors.bgElevated,
+    backgroundColor: 'transparent',
     borderWidth: 2,
     borderColor: Colors.border,
   },
+  dotFilled: {
+    backgroundColor: Colors.accent,
+    borderWidth: 0,
+  },
   error: {
-    ...Typography.caption,
-    color: Colors.danger,
-    height: 20,
-    marginBottom: Spacing.lg,
+    color: Colors.red,
+    fontSize: FontSize.sm,
+    marginBottom: Spacing.sm,
+    textAlign: 'center',
   },
-  errorSpace: {
-    height: 20,
-    marginBottom: Spacing.lg,
-  },
-  keypad: {
+  dialpad: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    width: 270,
     justifyContent: 'center',
-  },
-  key: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    margin: 8,
-    backgroundColor: Colors.bgCard,
-  },
-  keyText: {
-    fontSize: 28,
-    fontWeight: '500',
-    color: Colors.text,
+    maxWidth: KEY_SIZE * 3 + 48 + 12,
+    marginTop: Spacing.sm,
   },
 });
+

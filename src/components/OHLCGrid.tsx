@@ -1,35 +1,20 @@
-/**
- * OHLCGrid — Market data grid showing Open/Close/High/Low/Ask/Bid
- */
-
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { GoldApiResponse } from '../api/types';
-import { Colors, Spacing, Radius, Typography } from '../constants/theme';
-import { formatUSD } from '../utils/formatPrice';
+import { GoldApiResponse, DisplayCurrency } from '../api/types';
+import { convertPrice } from '../utils/priceCalc';
+import { formatCurrency } from '../utils/formatPrice';
+import { Colors, FontSize, Spacing, Radius } from '../constants/theme';
 
 interface OHLCGridProps {
   data: GoldApiResponse;
+  rate: number;
+  currency: DisplayCurrency;
 }
 
-interface DataItem {
-  label: string;
-  value: number;
-}
-
-function GridItem({ label, value }: DataItem) {
-  return (
-    <View style={styles.item}>
-      <Text style={styles.label}>{label}</Text>
-      <Text style={styles.value}>{formatUSD(value)}</Text>
-    </View>
-  );
-}
-
-export default function OHLCGrid({ data }: OHLCGridProps) {
-  const items: DataItem[] = [
+export default function OHLCGrid({ data, rate, currency }: OHLCGridProps) {
+  const cells: { label: string; value: number }[] = [
     { label: 'Open', value: data.open_price },
-    { label: 'Prev Close', value: data.prev_close_price },
+    { label: 'Close', value: data.prev_close_price },
     { label: 'High', value: data.high_price },
     { label: 'Low', value: data.low_price },
     { label: 'Ask', value: data.ask },
@@ -38,10 +23,15 @@ export default function OHLCGrid({ data }: OHLCGridProps) {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.sectionTitle}>Market Data</Text>
+      <Text style={styles.heading}>Market Data</Text>
       <View style={styles.grid}>
-        {items.map((item) => (
-          <GridItem key={item.label} label={item.label} value={item.value} />
+        {cells.map((cell) => (
+          <View key={cell.label} style={styles.cell}>
+            <Text style={styles.label}>{cell.label}</Text>
+            <Text style={styles.value}>
+              {formatCurrency(convertPrice(cell.value, rate), currency)}
+            </Text>
+          </View>
         ))}
       </View>
     </View>
@@ -49,35 +39,36 @@ export default function OHLCGrid({ data }: OHLCGridProps) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: Colors.bgCard,
-    borderRadius: Radius.lg,
-    padding: Spacing.lg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  sectionTitle: {
-    ...Typography.h3,
-    marginBottom: Spacing.lg,
+  container: { marginTop: Spacing.lg },
+  heading: {
+    fontSize: FontSize.md,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginBottom: Spacing.md,
   },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: Spacing.sm,
   },
-  item: {
+  cell: {
     width: '31%',
-    backgroundColor: Colors.bgElevated,
+    backgroundColor: Colors.bgCard,
     borderRadius: Radius.md,
     padding: Spacing.md,
-    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   label: {
-    ...Typography.label,
-    marginBottom: Spacing.xs,
+    fontSize: FontSize.xs,
+    color: Colors.textMuted,
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   value: {
-    ...Typography.bodyBold,
-    fontSize: 14,
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+    color: Colors.textPrimary,
   },
 });

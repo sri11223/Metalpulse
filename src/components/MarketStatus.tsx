@@ -1,21 +1,33 @@
-/**
- * MarketStatus — Shows whether NYSE is currently OPEN or CLOSED
- */
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { Colors, Spacing, Radius, Typography } from '../constants/theme';
-import { isMarketOpen } from '../utils/formatTime';
+import { Colors, FontSize, Spacing } from '../constants/theme';
+
+function isMarketOpen(): boolean {
+  const now = new Date();
+  const utcDay = now.getUTCDay();
+  const utcHour = now.getUTCHours();
+  const utcMin = now.getUTCMinutes();
+  const total = utcHour * 60 + utcMin;
+
+  // Precious metals trade ~23h/day Sun 22:00 UTC – Fri 21:00 UTC
+  if (utcDay === 6) return false; // Saturday
+  if (utcDay === 0 && total < 22 * 60) return false; // Sunday before 22:00
+  if (utcDay === 5 && total >= 21 * 60) return false; // Friday after 21:00
+  return true;
+}
 
 export default function MarketStatus() {
-  const open = isMarketOpen();
+  const [open, setOpen] = useState(isMarketOpen);
+
+  useEffect(() => {
+    const id = setInterval(() => setOpen(isMarketOpen()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   return (
-    <View style={[styles.container, { backgroundColor: open ? Colors.successDim : Colors.dangerDim }]}>
-      <View style={[styles.dot, { backgroundColor: open ? Colors.success : Colors.danger }]} />
-      <Text style={[styles.text, { color: open ? Colors.success : Colors.danger }]}>
-        NYSE Market {open ? 'OPEN' : 'CLOSED'}
-      </Text>
+    <View style={styles.container}>
+      <View style={[styles.dot, { backgroundColor: open ? Colors.green : Colors.red }]} />
+      <Text style={styles.text}>{open ? 'Market Open' : 'Market Closed'}</Text>
     </View>
   );
 }
@@ -24,11 +36,7 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.full,
-    alignSelf: 'center',
-    gap: Spacing.sm,
+    gap: Spacing.xs,
   },
   dot: {
     width: 8,
@@ -36,8 +44,8 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   text: {
-    ...Typography.caption,
-    fontWeight: '600',
-    fontSize: 11,
+    fontSize: FontSize.xs,
+    color: Colors.textSecondary,
+    fontWeight: '500',
   },
 });
