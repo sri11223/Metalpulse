@@ -6,6 +6,7 @@
  */
 
 import { ExchangeRateLatestResponse } from './types';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const FALLBACK_RATES: Record<string, number> = {
   USD: 1,
@@ -18,7 +19,15 @@ const FALLBACK_RATES: Record<string, number> = {
   AUD: 1.53,
 };
 
-function getApiKey(): string {
+const STORAGE_KEY_EXCHANGE = '@metalpulse_custom_exchange_api_key';
+
+async function getApiKey(): Promise<string> {
+  try {
+    const customKey = await AsyncStorage.getItem(STORAGE_KEY_EXCHANGE);
+    if (customKey) return customKey;
+  } catch {
+    // ignore
+  }
   return process.env.EXPO_PUBLIC_INR_KEY ?? '';
 }
 
@@ -27,7 +36,7 @@ function getApiKey(): string {
  * Returns a map of currency code → rate
  */
 export async function fetchExchangeRates(): Promise<Record<string, number>> {
-  const apiKey = getApiKey();
+  const apiKey = await getApiKey();
   const url = `https://v6.exchangerate-api.com/v6/${apiKey}/latest/USD`;
 
   try {

@@ -1,10 +1,35 @@
 import { MetalCode, GoldApiResponse } from './types';
 import { FETCH_TIMEOUT_MS } from '../constants/metals';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const BASE_URL = 'https://www.goldapi.io/api';
 
-function getApiKey(): string {
-  return process.env.EXPO_PUBLIC_GOLDAPI_KEY ?? '';
+const STORAGE_KEY_GOLD = '@metalpulse_custom_gold_api_key';
+
+/** Cached custom key to avoid async reads on every request */
+let _cachedCustomKey: string | null = null;
+let _keyLoaded = false;
+
+async function loadCustomKey(): Promise<void> {
+  if (_keyLoaded) return;
+  try {
+    _cachedCustomKey = await AsyncStorage.getItem(STORAGE_KEY_GOLD);
+  } catch {
+    _cachedCustomKey = null;
+  }
+  _keyLoaded = true;
+}
+
+/** Call this when user saves a new key to update the cache */
+export function invalidateGoldApiKeyCache(): void {
+  _keyLoaded = false;
+  _cachedCustomKey = null;
+}
+
+async function getApiKey(): Promise<string> {
+  await loadCustomKey();
+  // Custom key takes priority, fallback to built-in env key
+  return _cachedCustomKey || process.env.EXPO_PUBLIC_GOLDAPI_KEY || '';
 }
 
 export class ApiError extends Error {
@@ -44,7 +69,7 @@ function classifyHttpError(status: number): ApiError {
 }
 
 export async function fetchMetalPrice(metalCode: MetalCode): Promise<GoldApiResponse> {
-  const apiKey = getApiKey();
+  const apiKey = await getApiKey();
   const url = `${BASE_URL}/${metalCode}/USD`;
 
   const response = await fetchWithTimeout(url, {

@@ -2,7 +2,15 @@
 
 **Real-time precious metal price tracker for professional investors & traders.**
 
-Built with React Native (Expo SDK 54) — featuring live pricing, AI-powered technical analysis, portfolio tracking, SIP calculator, and multi-currency support.
+Built with React Native (Expo SDK 54) — featuring live pricing, AI-powered technical analysis, portfolio tracking, SIP calculator, digital gold, and multi-currency support.
+
+## 📲 Download APK
+
+[![Download APK](https://img.shields.io/badge/Download-Android_APK-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://expo.dev/artifacts/eas/56v8zChunFGePTvXYTNuZ4.apk)
+
+> **Direct link:** https://expo.dev/artifacts/eas/56v8zChunFGePTvXYTNuZ4.apk
+
+---
 
 ![React Native](https://img.shields.io/badge/React_Native-0.81.5-61DAFB?style=flat&logo=react)
 ![Expo](https://img.shields.io/badge/Expo_SDK-54-000020?style=flat&logo=expo)
@@ -15,7 +23,7 @@ Built with React Native (Expo SDK 54) — featuring live pricing, AI-powered tec
 
 ### Core
 
-- **Live Metal Prices** — Gold, Silver, Platinum & Palladium with 30-second auto-refresh
+- **Live Metal Prices** — Gold, Silver, Platinum & Palladium with 5-minute auto-refresh
 - **8 Currencies** — USD, INR, EUR, GBP, AED, JPY, CAD, AUD with live exchange rates
 - **Animated Price Updates** — Green/red flash animations on price changes
 - **PIN Lock + Biometric Auth** — 4-digit custom dialpad + fingerprint/face unlock
@@ -30,6 +38,9 @@ Built with React Native (Expo SDK 54) — featuring live pricing, AI-powered tec
 | 💰 **Investment Calculator** | Buy by weight or budget, with making charges |
 | ⚖️ **Weight Converter** | oz / gram / kg / tola / tael / grain with live pricing |
 | 🔔 **Price Alerts** | Above/below price alerts with persistent storage |
+| 🪙 **Digital Gold** | Buy/SIP/Gift/Sell gold with live pricing, GST calculation, preset amounts |
+| ❓ **FAQ** | Expandable accordion with 15+ questions about digital gold & investing |
+| ⚙️ **Settings** | Add your own API keys for higher rate limits (optional, with fallback) |
 
 ### UI/UX
 
@@ -40,6 +51,7 @@ Built with React Native (Expo SDK 54) — featuring live pricing, AI-powered tec
 - OHLC data grid with per-gram prices
 - Sparkline charts
 - Pull-to-refresh + countdown timer
+- Custom API key support (Settings screen)
 - Market sentiment bar with AI analysis
 
 ---
@@ -62,7 +74,7 @@ Built with React Native (Expo SDK 54) — featuring live pricing, AI-powered tec
 
 | API | Purpose | Refresh Rate |
 |-----|---------|-------------|
-| [GoldAPI.io](https://goldapi.io) | Metal prices (XAU, XAG, XPT, XPD) | 30 seconds |
+| [GoldAPI.io](https://goldapi.io) | Metal prices (XAU, XAG, XPT, XPD) | 5 minutes |
 | [ExchangeRate-API](https://exchangerate-api.com) | Currency conversion rates | On app start |
 
 ---
@@ -153,7 +165,10 @@ metalpulse/
 │   ├── sip.tsx                    # /sip → SIP Calculator
 │   ├── invest.tsx                 # /invest → Investment Calculator
 │   ├── converter.tsx              # /converter → Weight Converter
-│   └── alerts.tsx                 # /alerts → Price Alerts
+│   ├── alerts.tsx                 # /alerts → Price Alerts
+│   ├── digital-gold.tsx           # /digital-gold → Digital Gold Buy/SIP/Gift/Sell
+│   ├── faq.tsx                    # /faq → FAQ
+│   └── settings.tsx               # /settings → API Key Settings
 │
 ├── src/
 │   ├── api/
@@ -197,7 +212,10 @@ metalpulse/
 │   │   ├── HomeScreen.tsx         # Main dashboard with grid, tools, sentiment
 │   │   ├── InvestmentScreen.tsx   # Buy calculator
 │   │   ├── PortfolioScreen.tsx    # Portfolio tracker with P&L
-│   │   └── SIPCalculatorScreen.tsx # SIP return projections
+│   │   ├── SIPCalculatorScreen.tsx # SIP return projections
+│   │   ├── DigitalGoldScreen.tsx  # Digital gold Buy/SIP/Gift/Sell with live pricing
+│   │   ├── FAQScreen.tsx          # Expandable accordion FAQ
+│   │   └── SettingsScreen.tsx     # Custom API key management
 │   │
 │   └── utils/
 │       ├── formatPrice.ts         # Multi-currency formatting (Intl.NumberFormat)

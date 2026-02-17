@@ -124,6 +124,21 @@ export default function HomeScreen() {
             <Text style={styles.quickIcon}>⚖️</Text>
             <Text style={styles.quickLabel}>Converter</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={styles.quickBtn} onPress={() => router.push('/digital-gold' as any)} activeOpacity={0.7}>
+            <Text style={styles.quickIcon}>🪙</Text>
+            <Text style={styles.quickLabel}>Digital Gold</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.quickBtn} onPress={() => router.push('/faq' as any)} activeOpacity={0.7}>
+            <Text style={styles.quickIcon}>❓</Text>
+            <Text style={styles.quickLabel}>FAQ</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={[styles.quickRow, { marginTop: Spacing.sm }]}>
+          <TouchableOpacity style={styles.quickBtn} onPress={() => router.push('/settings' as any)} activeOpacity={0.7}>
+            <Text style={styles.quickIcon}>⚙️</Text>
+            <Text style={styles.quickLabel}>Settings</Text>
+          </TouchableOpacity>
+          <View style={[styles.quickBtn, { backgroundColor: 'transparent', borderColor: 'transparent' }]} />
           <View style={[styles.quickBtn, { backgroundColor: 'transparent', borderColor: 'transparent' }]} />
           <View style={[styles.quickBtn, { backgroundColor: 'transparent', borderColor: 'transparent' }]} />
         </View>
@@ -135,7 +150,7 @@ export default function HomeScreen() {
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            Auto-refresh every 30s • Live data from GoldAPI.io
+            Auto-refresh every 5 min • Live data from GoldAPI.io
           </Text>
         </View>
       </ScrollView>
