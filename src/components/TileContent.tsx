@@ -38,7 +38,7 @@ export default function TileContent({ metal, data, rate, currency }: TileContent
       <Text style={styles.purity}>{metal.purity}</Text>
 
       {/* Price in selected currency */}
-      <Text style={styles.price} numberOfLines={1} adjustsFontSizeToFit>
+      <Text style={styles.price} numberOfLines={1}>
         {formatCurrency(displayPrice, currency)} <Text style={styles.priceUnit}>/oz</Text>
       </Text>
 
