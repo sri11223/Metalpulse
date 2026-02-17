@@ -91,4 +91,5 @@ export interface MetalsContextType {
   refreshAll: () => void;
   refreshTrigger: number;
   getRate: (currency: DisplayCurrency) => number;
+  nextRefreshAt: number;
 }

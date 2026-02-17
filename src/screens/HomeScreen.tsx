@@ -11,14 +11,17 @@ import {
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
 import { METALS, CURRENCIES, CURRENCY_MAP } from '../constants/metals';
 import { useMetals } from '../context/MetalsContext';
 import { DisplayCurrency } from '../api/types';
 import MetalTile from '../components/MetalTile';
 import MarketStatus from '../components/MarketStatus';
+import RefreshCountdown from '../components/RefreshCountdown';
 import { Colors, FontSize, Spacing, Radius, Shadows } from '../constants/theme';
 
 export default function HomeScreen() {
+  const router = useRouter();
   const { refreshAll, selectedCurrency, setSelectedCurrency } = useMetals();
   const [refreshing, setRefreshing] = useState(false);
   const [currencyModalVisible, setCurrencyModalVisible] = useState(false);
@@ -84,9 +87,35 @@ export default function HomeScreen() {
           ))}
         </View>
 
+        {/* ── Quick Actions ── */}
+        <Text style={styles.quickTitle}>Tools</Text>
+        <View style={styles.quickRow}>
+          <TouchableOpacity style={styles.quickBtn} onPress={() => router.push('/sip' as any)} activeOpacity={0.7}>
+            <Text style={styles.quickIcon}>📊</Text>
+            <Text style={styles.quickLabel}>SIP Calculator</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.quickBtn} onPress={() => router.push('/invest' as any)} activeOpacity={0.7}>
+            <Text style={styles.quickIcon}>💰</Text>
+            <Text style={styles.quickLabel}>Buy Calculator</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.quickBtn} onPress={() => router.push('/converter' as any)} activeOpacity={0.7}>
+            <Text style={styles.quickIcon}>⚖️</Text>
+            <Text style={styles.quickLabel}>Converter</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.quickBtn} onPress={() => router.push('/alerts' as any)} activeOpacity={0.7}>
+            <Text style={styles.quickIcon}>🔔</Text>
+            <Text style={styles.quickLabel}>Price Alerts</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ── Refresh Timer ── */}
+        <View style={styles.countdownCenter}>
+          <RefreshCountdown />
+        </View>
+
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            Pull down to refresh • Data from GoldAPI.io
+            Auto-refresh every 2 min • Data from GoldAPI.io
           </Text>
         </View>
       </ScrollView>
@@ -202,12 +231,41 @@ const styles = StyleSheet.create({
   },
   footer: {
     alignItems: 'center',
-    marginTop: Spacing.xl,
+    marginTop: Spacing.md,
     paddingBottom: Spacing.lg,
   },
   footerText: {
     fontSize: FontSize.xs,
     color: Colors.textMuted,
+  },
+  quickTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: Spacing.xl,
+    marginBottom: Spacing.sm,
+  },
+  quickRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  quickBtn: {
+    flex: 1,
+    backgroundColor: Colors.bgCard,
+    borderRadius: Radius.md,
+    paddingVertical: Spacing.md,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 6,
+  },
+  quickIcon: { fontSize: 22 },
+  quickLabel: { fontSize: 10, fontWeight: '600', color: Colors.textSecondary, textAlign: 'center' },
+  countdownCenter: {
+    alignItems: 'center',
+    marginTop: Spacing.lg,
   },
 
   // ── Modal ──

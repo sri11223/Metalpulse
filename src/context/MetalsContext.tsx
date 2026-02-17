@@ -1,22 +1,24 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import { AppState, AppStateStatus } from 'react-native';
 import { MetalCode, GoldApiResponse, CachedMetal, MetalsContextType, DisplayCurrency } from '../api/types';
 import { fetchExchangeRates } from '../api/inrApi';
 import { CACHE_MAX_AGE_MS } from '../constants/metals';
+
+const AUTO_REFRESH_MS = 120_000; // 2 minutes
 
 const MetalsContext = createContext<MetalsContextType | null>(null);
 
 export function MetalsProvider({ children }: { children: React.ReactNode }) {
   const [cache, setFullCache] = useState<Record<MetalCode, CachedMetal | null>>({
-    XAU: null,
-    XAG: null,
-    XPT: null,
-    XPD: null,
+    XAU: null, XAG: null, XPT: null, XPD: null,
   });
   const [exchangeRates, setExchangeRates] = useState<Record<string, number> | null>(null);
   const [exchangeRatesLoading, setExchangeRatesLoading] = useState(true);
   const [selectedCurrency, setSelectedCurrency] = useState<DisplayCurrency>('USD');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [nextRefreshAt, setNextRefreshAt] = useState(Date.now() + AUTO_REFRESH_MS);
   const ratesFetched = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Fetch exchange rates once on mount
   useEffect(() => {
@@ -59,6 +61,30 @@ export function MetalsProvider({ children }: { children: React.ReactNode }) {
 
   const refreshAll = useCallback(() => {
     setRefreshTrigger((t) => t + 1);
+    setNextRefreshAt(Date.now() + AUTO_REFRESH_MS);
+  }, []);
+
+  // Auto-refresh timer
+  useEffect(() => {
+    timerRef.current = setInterval(() => {
+      setRefreshTrigger((t) => t + 1);
+      setNextRefreshAt(Date.now() + AUTO_REFRESH_MS);
+    }, AUTO_REFRESH_MS);
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, []);
+
+  // Refresh when app comes to foreground
+  useEffect(() => {
+    const handler = (state: AppStateStatus) => {
+      if (state === 'active') {
+        setRefreshTrigger((t) => t + 1);
+        setNextRefreshAt(Date.now() + AUTO_REFRESH_MS);
+      }
+    };
+    const sub = AppState.addEventListener('change', handler);
+    return () => sub.remove();
   }, []);
 
   const getRate = useCallback(
@@ -82,6 +108,7 @@ export function MetalsProvider({ children }: { children: React.ReactNode }) {
     refreshAll,
     refreshTrigger,
     getRate,
+    nextRefreshAt,
   };
 
   return <MetalsContext.Provider value={value}>{children}</MetalsContext.Provider>;

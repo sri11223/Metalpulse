@@ -19,6 +19,9 @@ import PriceChange from '../components/PriceChange';
 import SparklineChart from '../components/SparklineChart';
 import OHLCGrid from '../components/OHLCGrid';
 import GramPriceRow from '../components/GramPriceRow';
+import SpreadIndicator from '../components/SpreadIndicator';
+import DayRangeBar from '../components/DayRangeBar';
+import RefreshCountdown from '../components/RefreshCountdown';
 import { Colors, FontSize, Spacing, Radius, Shadows } from '../constants/theme';
 
 export default function DetailScreen() {
@@ -132,8 +135,29 @@ export default function DetailScreen() {
             <GramPriceRow data={data} rate={rate} currency={selectedCurrency} />
           )}
 
+          {/* ── Day Range ── */}
+          <DayRangeBar
+            data={data}
+            rate={rate}
+            currency={selectedCurrency}
+          />
+
+          {/* ── Bid-Ask Spread ── */}
+          {data.ask > 0 && data.bid > 0 && (
+            <SpreadIndicator
+              data={data}
+              rate={rate}
+              currency={selectedCurrency}
+            />
+          )}
+
           {/* ── OHLC Grid ── */}
           <OHLCGrid data={data} rate={rate} currency={selectedCurrency} />
+
+          {/* ── Refresh Countdown ── */}
+          <View style={styles.countdownRow}>
+            <RefreshCountdown />
+          </View>
 
           {/* ── Extra Info ── */}
           <View style={styles.infoCard}>
@@ -283,6 +307,10 @@ const styles = StyleSheet.create({
   },
 
   // ── Info Card ──
+  countdownRow: {
+    alignItems: 'center',
+    marginTop: Spacing.lg,
+  },
   infoCard: {
     backgroundColor: Colors.bgCard,
     borderRadius: Radius.lg,
