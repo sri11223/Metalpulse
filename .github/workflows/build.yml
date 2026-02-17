@@ -1,0 +1,96 @@
+name: Build — Expo EAS
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to build'
+        required: true
+        default: 'android'
+        type: choice
+        options:
+          - android
+          - ios
+          - all
+      profile:
+        description: 'Build profile'
+        required: true
+        default: 'preview'
+        type: choice
+        options:
+          - development
+          - preview
+          - production
+
+env:
+  EXPO_PUBLIC_GOLDAPI_KEY: ${{ secrets.EXPO_PUBLIC_GOLDAPI_KEY }}
+  EXPO_PUBLIC_INR_KEY: ${{ secrets.EXPO_PUBLIC_INR_KEY }}
+
+jobs:
+  build:
+    name: EAS Build
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        platform: ${{ github.event.inputs.platform == 'all' && fromJSON('["android","ios"]') || fromJSON(format('["{0}"]', github.event.inputs.platform || 'android')) }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Expo CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Build with EAS
+        run: |
+          PROFILE="${{ github.event.inputs.profile || 'preview' }}"
+          eas build --platform ${{ matrix.platform }} --profile $PROFILE --non-interactive
+
+  build-on-tag:
+    name: Production build on tag
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Expo CLI
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Android (production)
+        run: eas build --platform android --profile production --non-interactive
+
+      - name: Build iOS (production)
+        run: eas build --platform ios --profile production --non-interactive
