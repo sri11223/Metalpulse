@@ -1,5 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, StyleSheet, View } from 'react-native';
+import { TouchableOpacity, StyleSheet, View, Vibration } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MetalConfig } from '../api/types';
 import { Colors, Radius, Spacing, Shadows } from '../constants/theme';
@@ -11,9 +11,10 @@ import ErrorTile from './ErrorTile';
 
 interface MetalTileProps {
   metal: MetalConfig;
+  onLongPress?: (metal: MetalConfig) => void;
 }
 
-export default function MetalTile({ metal }: MetalTileProps) {
+export default function MetalTile({ metal, onLongPress }: MetalTileProps) {
   const router = useRouter();
   const { state, retry } = useMetalPrice(metal.code);
   const { selectedCurrency, getRate } = useMetals();
@@ -25,10 +26,19 @@ export default function MetalTile({ metal }: MetalTileProps) {
     }
   };
 
+  const handleLongPress = () => {
+    if (state.status === 'success' && onLongPress) {
+      Vibration.vibrate(30);
+      onLongPress(metal);
+    }
+  };
+
   return (
     <TouchableOpacity
       style={[styles.tile, Shadows.card]}
       onPress={handlePress}
+      onLongPress={handleLongPress}
+      delayLongPress={400}
       activeOpacity={state.status === 'success' ? 0.7 : 1}
       disabled={state.status !== 'success'}
     >
